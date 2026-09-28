@@ -25,6 +25,42 @@ enum ShelfSelectionSupport {
     }
 }
 
+/// Tracks the shelf shortcut's asynchronous Finder selection read. Every press
+/// takes a new ticket, and a later press, clearing the Shelf or turning it off
+/// retires the older one, so a slow Finder or a permission prompt answering late
+/// can neither add a stale selection nor toggle the Shelf after the fact.
+struct ShelfShortcutSelectionRequests {
+    enum Outcome: Equatable {
+        case discard
+        case toggle
+        case add([URL])
+    }
+
+    private var lastTicket: UInt64 = 0
+    private var pendingTicket: UInt64?
+
+    var hasPending: Bool { pendingTicket != nil }
+
+    mutating func begin() -> UInt64 {
+        lastTicket &+= 1
+        pendingTicket = lastTicket
+        return lastTicket
+    }
+
+    mutating func invalidate() {
+        pendingTicket = nil
+    }
+
+    /// Settles a reply once. `stillAllowed` is the feature state rechecked when
+    /// the reply arrives, not the state from when the shortcut was pressed.
+    mutating func resolve(_ ticket: UInt64, urls: [URL], stillAllowed: Bool) -> Outcome {
+        guard ticket == pendingTicket else { return .discard }
+        pendingTicket = nil
+        guard stillAllowed else { return .discard }
+        return urls.isEmpty ? .toggle : .add(urls)
+    }
+}
+
 /// A Shelf item reduced to what revealing needs: identity and nesting. A pure
 /// stand-in for the service's item tree, like ShelfEdgeScreen is for NSScreen,
 /// so the rules below stay in the unit harness.

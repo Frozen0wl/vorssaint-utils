@@ -204,6 +204,7 @@ final class ShelfService: ObservableObject {
     private var pointerInsidePanel = false
     @Published private(set) var dropTargeted = false
     @Published private(set) var hotkeyRegistrationFailed = false
+    private var shortcutSelectionRequests = ShelfShortcutSelectionRequests()
     private var interactionDepth = 0
     /// Drag-pasteboard change count captured when the current gesture started.
     /// Finder bumps the count after this point; Dock stacks can publish the
@@ -330,6 +331,7 @@ final class ShelfService: ObservableObject {
             syncHotkey()
             syncDragMonitor()
         } else {
+            shortcutSelectionRequests.invalidate()
             cancelPendingPromiseDeliveries()
             unregisterHotkey()
             stopDragMonitor()
@@ -1097,6 +1099,7 @@ final class ShelfService: ObservableObject {
     /// keeps its pinned entries. The tile's own remove button still takes a
     /// pinned item away.
     func clear() {
+        shortcutSelectionRequests.invalidate()
         cancelPendingPromiseDeliveries()
         let protected = protectedIDs
         guard !protected.isEmpty else {
@@ -2388,16 +2391,37 @@ final class ShelfService: ObservableObject {
     /// selected files along, like dragging them onto the shelf. Without a
     /// selection it keeps toggling, so the shortcut still closes the shelf.
     func handleShortcut() {
-        guard UserDefaults.standard.bool(forKey: DefaultsKey.shelfShortcutAddsFinderSelection),
+        guard shortcutMayAddFinderSelection,
               NSWorkspace.shared.frontmostApplication?.bundleIdentifier == "com.apple.finder"
-        else { toggle(); return }
-        DispatchQueue.global(qos: .userInitiated).async {
+        else {
+            shortcutSelectionRequests.invalidate()
+            toggle()
+            return
+        }
+        let ticket = shortcutSelectionRequests.begin()
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             let urls = FinderBridge.selectionURLs()
             DispatchQueue.main.async {
-                if urls.isEmpty || !self.addFiles(urls) { self.toggle(); return }
-                self.summon()
+                guard let self else { return }
+                switch self.shortcutSelectionRequests.resolve(
+                    ticket, urls: urls, stillAllowed: self.shortcutMayAddFinderSelection) {
+                case .discard:
+                    return
+                case .toggle:
+                    self.toggle()
+                case let .add(urls):
+                    if self.addFiles(urls) { self.summon() } else { self.toggle() }
+                }
             }
         }
+    }
+
+    private var shortcutMayAddFinderSelection: Bool {
+        let defaults = UserDefaults.standard
+        return AppFeature.shelf.isAvailable
+            && defaults.bool(forKey: DefaultsKey.shelfEnabled)
+            && defaults.bool(forKey: DefaultsKey.shelfShortcutEnabled)
+            && defaults.bool(forKey: DefaultsKey.shelfShortcutAddsFinderSelection)
     }
 
     func togglePin() {
