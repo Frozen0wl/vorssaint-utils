@@ -406,7 +406,7 @@ final class ShelfService: ObservableObject {
                 guard id.signature == 0x5655_5348, id.id == 2
                 else { return OSStatus(eventNotHandledErr) }
                 let service = Unmanaged<ShelfService>.fromOpaque(userData).takeUnretainedValue()
-                DispatchQueue.main.async { service.toggle() }
+                DispatchQueue.main.async { service.handleShortcut() }
                 return noErr
             }, 1, &spec, Unmanaged.passUnretained(self).toOpaque(), &hotKeyHandler)
         }
@@ -2382,6 +2382,22 @@ final class ShelfService: ObservableObject {
     func toggle() {
         if NotchService.shared.openShelf(toggle: true) { return }
         isVisible ? hide() : summon()
+    }
+
+    /// With the option on and Finder in front, the shortcut brings the
+    /// selected files along, like dragging them onto the shelf. Without a
+    /// selection it keeps toggling, so the shortcut still closes the shelf.
+    func handleShortcut() {
+        guard UserDefaults.standard.bool(forKey: DefaultsKey.shelfShortcutAddsFinderSelection),
+              NSWorkspace.shared.frontmostApplication?.bundleIdentifier == "com.apple.finder"
+        else { toggle(); return }
+        DispatchQueue.global(qos: .userInitiated).async {
+            let urls = FinderBridge.selectionURLs()
+            DispatchQueue.main.async {
+                if urls.isEmpty || !self.addFiles(urls) { self.toggle(); return }
+                self.summon()
+            }
+        }
     }
 
     func togglePin() {

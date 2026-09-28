@@ -1081,6 +1081,8 @@ extension Strings {
         linearScrollCaption: "Fare tekerleğinin her adımı, ne kadar hızlı çevrilirse çevrilsin aynı mesafeyi kaydırır. İzleme dörtgeni değişmez.",
         linearScrollLinesLabel: "Adım başına satır",
         shelfClearOnClose: "Kapatınca temizle",
-        shelfClearOnCloseCaption: "Rafı yalnızca kapatma düğmesine tıkladığında boşaltır. Otomatik gizleme ve daraltma öğeleri korur."
+        shelfClearOnCloseCaption: "Rafı yalnızca kapatma düğmesine tıkladığında boşaltır. Otomatik gizleme ve daraltma öğeleri korur.",
+        shelfShortcutFinderSelection: "Kısayolla Finder seçimini ekle",
+        shelfShortcutFinderSelectionCaption: "Finder öndeyken kısayol, rafı seçili dosyalar içinde olacak şekilde açar. Hiçbir şey seçili değilse her zamanki gibi açılır."
     )
 }
