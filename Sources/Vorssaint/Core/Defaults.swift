@@ -35,6 +35,8 @@ enum DefaultsKey {
     // to match, and losing one ends the session). Issue #1587.
     static let keepAwakeAutomationRequireAll = "keepAwakeAutomationRequireAll"
     static let keepAwakePauseWhenLocked = "keepAwakePauseWhenLocked"
+    static let keepAwakeSwitchUsesUntil = "keepAwakeSwitchUsesUntil" // panel switch restarts the Until chip
+    static let keepAwakeUntilTime = "keepAwakeUntilTime"  // last picked end time; 0 = none yet
     static let keepAwakeMouseJiggleEnabled = "keepAwakeMouseJiggleEnabled"
     static let keepAwakeMouseJiggleInterval = "keepAwakeMouseJiggleIntervalMinutes"
     static let hotkeyEnabled = "hotkeyEnabled"
@@ -197,6 +199,7 @@ enum DefaultsKey {
     static let brightnessControlEnabled = "brightnessControlEnabled" // sliders for every display
     static let brightnessKeysEnabled = "brightnessKeysEnabled" // brightness keys act on the display under the pointer
     static let brightnessOSDEnabled = "brightnessOSDEnabled" // brightness adjustment overlay
+    static let brightnessKeyStep = "brightnessKeyStep" // BrightnessSupport.KeyStep raw value
     static let displayBrightnessShortcutsEnabled = "displayBrightnessShortcutsEnabled"
     static let displayBrightnessDecreaseShortcut = "displayBrightnessDecreaseShortcut"
     static let displayBrightnessIncreaseShortcut = "displayBrightnessIncreaseShortcut"
@@ -380,6 +383,7 @@ enum DefaultsKey {
     static let menuBarUsageBarMediumThreshold = "menuBarUsageBarMediumThreshold" // percent
     static let menuBarUsageBarHighThreshold = "menuBarUsageBarHighThreshold" // percent
     static let menuBarHideIconWithMetrics = "menuBarHideIconWithMetrics" // glyph hides while metrics render in the main item
+    static let menuBarIconSymbol = "menuBarIconSymbol" // system symbol name drawn instead of the glyph; empty keeps the glyph
     static let menuBarMetricOrder = "menuBarMetricOrder" // comma-separated MenuBarMetric raw values
     static let menuBarCombineTemperatures = "menuBarCombineTemperatures" // usage/charge + temperature in one block when possible
     static let menuBarSeparateMetrics = "menuBarSeparateMetrics" // one status item per active metric
@@ -542,7 +546,8 @@ enum DefaultsKey {
     static let clipboardAutoClearOnDisplaySleep = "clipboardAutoClearOnDisplaySleep"
     static let clipboardAutoClearOnScreenLock = "clipboardAutoClearOnScreenLock"
 
-    static let windowPreviewExcludedApps = "windowPreviewExcludedApps" // pause thumbnail capture while these apps are in front
+    static let windowPreviewExcludedApps = "windowPreviewExcludedApps" // pause Dock Preview thumbnail capture while these apps are in front (once shared with the app switcher)
+    static let switcherPreviewExcludedApps = "switcherPreviewExcludedApps" // pause app switcher thumbnail capture while these apps are in front
     static let diskEjectExcludedVolumes = "diskEjectExcludedVolumes" // volume names/UUIDs excluded from Eject all disks
     // Quick tools: paste as plain text, color picker, screen OCR, mic mute.
     static let pastePlainEnabled = "pastePlainEnabled"
@@ -768,6 +773,9 @@ enum DefaultsKey {
     static let notchOutlineEnabled = "notchOutlineEnabled"
     static let notchCustomWidth = "notchCustomWidth"
     static let notchCustomHeight = "notchCustomHeight"
+    // Fits the island to one Mac's camera housing; never backed up.
+    static let notchCameraFitWidth = "notchCameraFitWidth"
+    static let notchCameraFitHeight = "notchCameraFitHeight"
     static let notchHapticFeedback = "notchHapticFeedback"
     static let notchShelf = "notchShelf"
     static let notchDragReveal = "notchDragReveal"
@@ -799,6 +807,7 @@ enum DefaultsKey {
     static let notchDownloadsFolderBookmark = "notchDownloadsFolderBookmark"
     static let notchCalendarEnabled = "notchCalendarEnabled"
     static let notchCalendarCountdown = "notchCalendarCountdown"
+    static let notchCalendarTimeLeft = "notchCalendarTimeLeft" // the event under way counts down to its end
     static let notchCalendarExcluded = "notchCalendarExcluded" // [EKCalendar.calendarIdentifier] left out of the island
     // AI agents: what the island reads from Claude Code and Codex, and shows.
     static let notchAgentsEnabled = "notchAgentsEnabled"
@@ -825,6 +834,7 @@ enum DefaultsKey {
     static let notchHoverDelay = "notchHoverDelay"
     static let notchReturnHome = "notchReturnHome"
     static let notchHomeModule = "notchHomeModule"
+    static let notchOpensActivity = "notchOpensActivity"
     static let notchHiddenModules = "notchHiddenModules"
     static let notchModuleOrder = "notchModuleOrder"
     static let notchQuickAccessLayout = "notchQuickAccessLayout"
@@ -832,6 +842,7 @@ enum DefaultsKey {
     static let notchQuickAccessSecond = "notchQuickAccessSecond"
     static let notchQuickAccessThird = "notchQuickAccessThird"
     static let notchVolume = "notchVolume"
+    static let notchMicrophone = "notchMicrophone"
     static let notchBrightness = "notchBrightness"
     static let notchBattery = "notchBattery"
     static let notchClipboard = "notchClipboard"
@@ -1099,6 +1110,8 @@ enum Defaults {
         DefaultsKey.keepAwakeRunningAppBundleIDs: [String](),
         DefaultsKey.keepAwakeAutomationRequireAll: false,
         DefaultsKey.keepAwakePauseWhenLocked: false,
+        DefaultsKey.keepAwakeSwitchUsesUntil: false,
+        DefaultsKey.keepAwakeUntilTime: 0.0,
         DefaultsKey.keepAwakeMouseJiggleEnabled: false,
         DefaultsKey.keepAwakeMouseJiggleInterval: 5,
         DefaultsKey.hotkeyEnabled: true,
@@ -1238,6 +1251,7 @@ enum Defaults {
         DefaultsKey.brightnessControlEnabled: false,
         DefaultsKey.brightnessKeysEnabled: false,
         DefaultsKey.brightnessOSDEnabled: false,
+        DefaultsKey.brightnessKeyStep: BrightnessSupport.KeyStep.standard.rawValue,
         DefaultsKey.displayBrightnessShortcutsEnabled: false,
         DefaultsKey.displayBrightnessDecreaseShortcut: "shift+command:27",
         DefaultsKey.displayBrightnessIncreaseShortcut: "shift+command:24",
@@ -1305,6 +1319,8 @@ enum Defaults {
         DefaultsKey.notchOutlineEnabled: false,
         DefaultsKey.notchCustomWidth: NotchSize.defaultWidth,
         DefaultsKey.notchCustomHeight: NotchSize.defaultHeight,
+        DefaultsKey.notchCameraFitWidth: 0.0,
+        DefaultsKey.notchCameraFitHeight: 0.0,
         DefaultsKey.notchHapticFeedback: true,
         DefaultsKey.notchShelf: true,
         DefaultsKey.notchDragReveal: true,
@@ -1330,6 +1346,7 @@ enum Defaults {
         DefaultsKey.notchAccessoriesEnabled: true,
         DefaultsKey.notchCalendarEnabled: true,
         DefaultsKey.notchCalendarCountdown: false,
+        DefaultsKey.notchCalendarTimeLeft: false,
         DefaultsKey.notchCalendarExcluded: [String](),
         DefaultsKey.notchAgentsEnabled: true,
         DefaultsKey.notchAgentsClaude: true,
@@ -1360,10 +1377,12 @@ enum Defaults {
         DefaultsKey.notchHoverDelay: NotchSupport.defaultHoverDelay,
         DefaultsKey.notchReturnHome: false,
         DefaultsKey.notchHomeModule: NotchModule.controls.rawValue,
+        DefaultsKey.notchOpensActivity: true,
         DefaultsKey.notchHiddenModules: "",
         DefaultsKey.notchModuleOrder: "",
         DefaultsKey.notchQuickAccessLayout: Data(),
         DefaultsKey.notchVolume: true,
+        DefaultsKey.notchMicrophone: true,
         DefaultsKey.notchBrightness: true,
         DefaultsKey.notchBattery: true,
         DefaultsKey.notchClipboard: true,
@@ -1474,6 +1493,7 @@ enum Defaults {
         DefaultsKey.menuBarUsageBarMediumThreshold: 70,
         DefaultsKey.menuBarUsageBarHighThreshold: 90,
         DefaultsKey.menuBarHideIconWithMetrics: false,
+        DefaultsKey.menuBarIconSymbol: "",
         DefaultsKey.windowLayoutHiddenActions: "",
         DefaultsKey.windowLayoutWindowGap: 0,
         DefaultsKey.windowLayoutScreenGap: 0,
@@ -1603,6 +1623,7 @@ enum Defaults {
         DefaultsKey.finderCutPasteShowHUD: true,
         DefaultsKey.finderPasteImageAsFile: false,
         DefaultsKey.windowPreviewExcludedApps: [String](),
+        DefaultsKey.switcherPreviewExcludedApps: [String](),
         DefaultsKey.diskEjectExcludedVolumes: [String](),
         DefaultsKey.pastePlainEnabled: false,
         DefaultsKey.pastePlainShortcut: GlobalShortcut.pastePlainDefault.storageValue,
@@ -1789,6 +1810,7 @@ enum Defaults {
         migrateWhatsAppDownloadsEnabled(in: defaults)
         migrateBatteryTemperatureVisibility(in: defaults)
         migrateSwitcherPreviewSize(in: defaults)
+        migrateSwitcherPreviewExcludedApps(in: defaults)
         defaults.register(defaults: registeredDefaults)
         defaults.register(defaults: AppFeature.availabilityDefaults)
         activateBetaChannelIfRunningBeta(in: defaults)
@@ -1904,6 +1926,17 @@ enum Defaults {
         guard defaults.object(forKey: DefaultsKey.switcherPreviewSize) == nil else { return }
         defaults.set(defaults.string(forKey: DefaultsKey.previewSize) ?? "normal",
                      forKey: DefaultsKey.switcherPreviewSize)
+    }
+
+    /// The app switcher used to share Dock Preview's paused apps. Copy the
+    /// list once, before defaults are registered, so both keep pausing in
+    /// the same apps after the upgrade. With no list saved yet, store an
+    /// empty one: an app paused in Dock Preview later would otherwise be
+    /// copied at the next launch.
+    static func migrateSwitcherPreviewExcludedApps(in defaults: UserDefaults) {
+        guard defaults.object(forKey: DefaultsKey.switcherPreviewExcludedApps) == nil else { return }
+        defaults.set(defaults.stringArray(forKey: DefaultsKey.windowPreviewExcludedApps) ?? [],
+                     forKey: DefaultsKey.switcherPreviewExcludedApps)
     }
 
     static func migrateBatteryTemperatureVisibility(in defaults: UserDefaults) {
@@ -2168,6 +2201,37 @@ enum Defaults {
         }
         return icon
     }
+
+    /// A typed symbol name without the spaces around it; empty keeps the
+    /// Vorssaint glyph. Whether this Mac has the symbol is left to the menu
+    /// bar drawing, since a backup can carry a name from a newer macOS.
+    static func sanitizedMenuBarIconSymbol(_ rawValue: String?) -> String {
+        rawValue?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
+
+    /// What the menu bar icon field saves as it is typed: a name this Mac has
+    /// a symbol for, nothing for the Vorssaint icon, and otherwise the name
+    /// the field opened with, so a typo never leaves a valid half behind.
+    static func menuBarIconSymbolToSave(typed: String?, opening: String,
+                                        exists: (String) -> Bool) -> String {
+        let name = sanitizedMenuBarIconSymbol(typed)
+        return name.isEmpty || exists(name) ? name : opening
+    }
+
+    /// The symbols the menu bar icon gallery offers after the Vorssaint icon:
+    /// solid shapes that still read at menu bar size, all present on macOS 14
+    /// (some under older names, which later versions still accept). Keep
+    /// Awake's symbols stay out, so an active session still stands out.
+    static let menuBarIconGallery = [
+        "bolt.fill", "star.fill", "heart.fill", "flame.fill", "sparkles", "leaf.fill",
+        "drop.fill", "snowflake", "sun.max.fill", "moon.stars.fill", "cloud.fill", "mountain.2.fill",
+        "circle.fill", "square.fill", "triangle.fill", "diamond.fill", "hexagon.fill", "seal.fill",
+        "circle.lefthalf.filled", "circle.hexagongrid.fill", "infinity",
+        "command", "cpu.fill", "memorychip.fill", "gauge.with.dots.needle.67percent",
+        "fanblades.fill", "gearshape.fill", "terminal.fill", "waveform",
+        "wand.and.stars", "key.fill", "crown.fill", "gamecontroller.fill", "headphones",
+        "music.note", "paperplane.fill", "pawprint.fill", "cat.fill", "hare.fill", "tortoise.fill",
+    ]
 
     static func sanitizedMonitorInterval(_ seconds: Int) -> Int {
         allowedMonitorIntervals.contains(seconds) ? seconds : 2

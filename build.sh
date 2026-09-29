@@ -398,6 +398,7 @@ if (( TEST )); then
         Sources/Vorssaint/Services/DiskImageInstaller/DiskImageInstallerSupport.swift
         Sources/Vorssaint/UI/NonModalAlert.swift
         Sources/Vorssaint/Services/Clipboard/ClipboardHistorySupport.swift
+        Sources/Vorssaint/Core/ColorValue.swift
         Sources/Vorssaint/Services/Clipboard/ClipboardAutoClearSupport.swift
         Sources/Vorssaint/Services/AutoQuit/AutoQuitSupport.swift
         Sources/Vorssaint/Services/Shelf/ShelfSupport.swift
@@ -415,6 +416,7 @@ if (( TEST )); then
         Sources/Vorssaint/Core/SettingsNavigationStrings.swift
         Sources/Vorssaint/App/MenuBarSpacingSupport.swift
         Sources/Vorssaint/App/MenuBarAllowanceSupport.swift
+        Sources/Vorssaint/App/ReopenRequestSupport.swift
         Sources/Vorssaint/App/StatusItemAnchorSupport.swift
         Sources/Vorssaint/Services/DockClick/DockClickSupport.swift
         Sources/Vorssaint/Services/Finder/CutPasteProgressSupport.swift
@@ -422,6 +424,7 @@ if (( TEST )); then
         Sources/Vorssaint/Services/Finder/FinderPasteImageSupport.swift
         Sources/Vorssaint/Services/MiddleClick/MiddleClickSupport.swift
         Sources/Vorssaint/Services/MouseNavigation/MouseNavigationSupport.swift
+        Sources/Vorssaint/Services/MouseNavigation/MouseNavigationKeys.swift
         Sources/Vorssaint/Services/MouseButtons/MouseButtonShortcutSupport.swift
         Sources/Vorssaint/Services/MouseButtons/MouseSpacesGestureSupport.swift
         Sources/Vorssaint/Services/MouseClickDebounce/MouseClickDebounceSupport.swift
@@ -444,6 +447,7 @@ if (( TEST )); then
         Sources/Vorssaint/Services/CommandBar/CommandBarPreferences.swift
         Sources/Vorssaint/Services/CommandBar/CommandBarMath.swift
         Sources/Vorssaint/Services/CommandBar/CommandBarUnits.swift
+        Sources/Vorssaint/Services/CommandBar/CommandBarColors.swift
         Sources/Vorssaint/Services/CommandBar/CommandBarEmoji.swift
         Sources/Vorssaint/Services/CommandBar/CommandBarLinks.swift
         Sources/Vorssaint/Services/CommandBar/CommandBarDates.swift
