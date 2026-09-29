@@ -2416,16 +2416,34 @@ final class ShelfService: ObservableObject {
             DispatchQueue.main.async {
                 guard let self else { return }
                 switch self.shortcutSelectionRequests.resolve(
-                    ticket, urls: urls, stillAllowed: self.shortcutMayAddFinderSelection) {
+                    ticket, urls: urls, stillAllowed: self.shortcutMayAddFinderSelection,
+                    shelvedPaths: self.shelvedFilePaths) {
                 case .discard:
                     return
                 case .toggle:
                     self.toggle()
                 case let .add(urls):
+                    // A selection larger than the shelf holds is refused before
+                    // every file gets an icon, a thumbnail and a bookmark on the
+                    // main thread only to be thrown away.
+                    guard ShelfPersistenceSupport.canAdd(existingLeaves: self.itemCount,
+                                                         newLeaves: urls.count) else {
+                        NSSound.beep()
+                        self.toggle()
+                        return
+                    }
                     if self.addFiles(urls) { self.summon() } else { self.toggle() }
                 }
             }
         }
+    }
+
+    /// The paths of the files on the shelf, piles included.
+    private var shelvedFilePaths: Set<String> {
+        Set(dragItems(for: items).compactMap { item -> String? in
+            guard case let .file(url) = item.payload else { return nil }
+            return url.standardizedFileURL.path
+        })
     }
 
     private var shortcutMayAddFinderSelection: Bool {

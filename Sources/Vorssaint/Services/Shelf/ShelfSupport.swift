@@ -53,11 +53,17 @@ struct ShelfShortcutSelectionRequests {
 
     /// Settles a reply once. `stillAllowed` is the feature state rechecked when
     /// the reply arrives, not the state from when the shortcut was pressed.
-    mutating func resolve(_ ticket: UInt64, urls: [URL], stillAllowed: Bool) -> Outcome {
+    /// Files the shelf already holds are left out, so pressing the shortcut
+    /// again on the same selection toggles the shelf instead of shelving the
+    /// same files twice. Finder stays in front while the shelf is up, so that
+    /// second press is the ordinary way to close it.
+    mutating func resolve(_ ticket: UInt64, urls: [URL], stillAllowed: Bool,
+                          shelvedPaths: Set<String> = []) -> Outcome {
         guard ticket == pendingTicket else { return .discard }
         pendingTicket = nil
         guard stillAllowed else { return .discard }
-        return urls.isEmpty ? .toggle : .add(urls)
+        let fresh = urls.filter { !shelvedPaths.contains($0.standardizedFileURL.path) }
+        return fresh.isEmpty ? .toggle : .add(fresh)
     }
 }
 

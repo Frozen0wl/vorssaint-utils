@@ -58,6 +58,16 @@ enum ShelfFeatureTests {
             suite.expect(requests.resolve(disabled, urls: [file], stillAllowed: false) == .discard,
                    "a reply is rechecked against the feature state when it arrives")
             suite.expect(!requests.hasPending, "a rejected reply does not stay pending")
+
+            requests = ShelfShortcutSelectionRequests()
+            let again = requests.begin()
+            suite.expect(requests.resolve(again, urls: [file], stillAllowed: true,
+                                          shelvedPaths: [file.standardizedFileURL.path]) == .toggle,
+                   "pressing the shortcut again on files already shelved toggles the shelf instead of adding them twice")
+            let mixed = requests.begin()
+            suite.expect(requests.resolve(mixed, urls: [file, other], stillAllowed: true,
+                                          shelvedPaths: [file.standardizedFileURL.path]) == .add([other]),
+                   "only the selected files the shelf does not hold yet are added")
         }
 
         // MARK: Shelf persistence
