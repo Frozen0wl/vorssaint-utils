@@ -89,6 +89,8 @@ enum NotchHoverTests {
         var hiddenHoverMonitors: [Any] = []
         var hoverExitMonitors: [Any] = []
         var hoverWork: DispatchWorkItem?
+        var hoverEmphasisWork: DispatchWorkItem?
+        var hoverEmphasisReady = false
         var captureHover: ((Bool) -> Void)?
         func updateCaptureControlsHover(wasInside: Bool) {}
         func updateCaptureControlsClickThrough() {}
@@ -194,6 +196,8 @@ enum NotchHoverTests {
             UserDefaults.standard.enabled = false
             let resting = clickOnly.surfaceSize
             clickOnly.hover(true)
+            suite.expect(clickOnly.surfaceSize == resting, "a pointer passing straight over the island does not make it grow")
+            DispatchQueue.main.advance(NotchSupport.hoverEmphasisDelay)
             let emphasized = clickOnly.surfaceSize
             suite.expect(emphasized.height == resting.height + 5 && emphasized.width >= resting.width
                          && emphasized.width <= resting.width + 20 && clickOnly.hoverWork == nil,
@@ -220,6 +224,7 @@ enum NotchHoverTests {
         compactPulse.updateBounds()
         let compactResting = compactPulse.surfaceSize
         compactPulse.hover(true)
+        DispatchQueue.main.advance(NotchSupport.hoverEmphasisDelay)
         suite.expect(compactPulse.surfaceSize.height == compactResting.height + 5,
                      "a visible compact activity responds to hover without replacing its content")
         leave(compactPulse)
@@ -465,6 +470,7 @@ enum NotchHoverTests {
             let top = passed.windowHost!.rect
             NSEvent.mouseLocation = CGPoint(x: top.midX, y: top.maxY - 1)
             passed.hover(true)
+            DispatchQueue.main.advance(NotchSupport.hoverEmphasisDelay)
             passed.hover(false)
             suite.expect(passed.hoverEmphasized && NSEvent.global.count == 1 && NSEvent.local.count == 1,
                          "an exit reported at the top edge keeps the emphasis and follows the pointer")
@@ -477,6 +483,7 @@ enum NotchHoverTests {
             let silent = fixture()
             NSEvent.mouseLocation = CGPoint(x: top.midX, y: top.maxY - 1)
             silent.hover(true)
+            DispatchQueue.main.advance(NotchSupport.hoverEmphasisDelay)
             suite.expect(silent.hoverEmphasized && NSEvent.global.count == 1 && NSEvent.local.count == 1,
                          "the closed island follows the pointer while its hover emphasis shows")
             follow(to: CGPoint(x: top.midX + 10, y: top.maxY - 2))
@@ -484,6 +491,22 @@ enum NotchHoverTests {
             follow(to: CGPoint(x: top.midX, y: top.maxY + 300))
             suite.expect(!silent.hoverEmphasized && NSEvent.global.isEmpty && NSEvent.local.isEmpty,
                          "an unreported exit to the display above still clears the emphasis and its observers")
+            // A quick pass: in and out before the delay ends leaves the island still.
+            let quick = fixture()
+            NSEvent.mouseLocation = CGPoint(x: top.midX, y: top.maxY - 1)
+            quick.hover(true)
+            NSEvent.mouseLocation = CGPoint(x: top.midX, y: top.maxY + 300)
+            quick.hover(false)
+            DispatchQueue.main.advance(NotchSupport.hoverEmphasisDelay)
+            suite.expect(!quick.hoverEmphasized && NSEvent.global.isEmpty && NSEvent.local.isEmpty,
+                         "passing over the island faster than the delay never grows it")
+            let unreported = fixture()
+            NSEvent.mouseLocation = CGPoint(x: top.midX, y: top.maxY - 1)
+            unreported.hover(true)
+            NSEvent.mouseLocation = CGPoint(x: top.midX, y: top.maxY + 300)
+            DispatchQueue.main.advance(NotchSupport.hoverEmphasisDelay)
+            suite.expect(!unreported.hoverEmphasized && NSEvent.global.isEmpty,
+                         "a pointer gone by the end of the delay, even unreported, does not grow the island")
         }
         // Opening or peeking on hover ends the closed island's follow at once,
         // so the next move cannot tell a page or preview the pointer left.
