@@ -516,12 +516,37 @@ enum NotchHoverTests {
             let top = opening.windowHost!.rect
             NSEvent.mouseLocation = CGPoint(x: top.midX, y: top.maxY - 1)
             opening.hover(true)
+            DispatchQueue.main.advance(NotchSupport.hoverEmphasisDelay)
             suite.expect(opening.hoverEmphasized && NSEvent.global.count == 1,
                          "the emphasized island follows the pointer before it opens")
-            DispatchQueue.main.advance(0.26)
+            DispatchQueue.main.advance(0.21)
             suite.expect((expands ? opening.openings == 1 : opening.peeking)
                             && NSEvent.global.isEmpty && NSEvent.local.isEmpty,
                          "opening or peeking on hover drops the closed island's pointer observers")
+        }
+        // The activity picker shows while the pointer is over the island and
+        // is left behind the same way by a fast pass.
+        do {
+            let picking = fixture()
+            picking.compactActivity = .agents
+            picking.compactActivities = [.agents, .music]
+            let top = picking.windowHost!.rect
+            NSEvent.mouseLocation = CGPoint(x: top.midX, y: top.maxY - 1)
+            picking.hover(true)
+            suite.expect(picking.showsCompactActivityPicker && NSEvent.global.count == 1 && NSEvent.local.count == 1,
+                         "the activity picker follows the pointer while it shows")
+            follow(to: CGPoint(x: top.midX, y: top.maxY + 300))
+            suite.expect(!picking.showsCompactActivityPicker && NSEvent.global.isEmpty && NSEvent.local.isEmpty,
+                         "an unreported exit to the display above closes the activity picker")
+            let silentPick = fixture()
+            silentPick.compactActivity = .agents
+            silentPick.compactActivities = [.agents, .music]
+            NSEvent.mouseLocation = CGPoint(x: top.midX, y: top.maxY - 1)
+            silentPick.hover(true)
+            NSEvent.mouseLocation = CGPoint(x: top.midX, y: top.maxY + 300)
+            DispatchQueue.main.advance(NotchSupport.hoverEmphasisDelay)
+            suite.expect(!silentPick.showsCompactActivityPicker && !silentPick.inside,
+                         "a pointer gone before the emphasis delay ends, unreported, still closes the activity picker")
         }
         for disable: (Service) -> Void in [
             { $0.suspended = true }, { $0.windowHost = nil },

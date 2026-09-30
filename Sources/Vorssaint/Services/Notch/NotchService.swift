@@ -1057,9 +1057,15 @@ final class NotchService: ObservableObject {
                 guard let self else { return }
                 self.hoverEmphasisWork = nil
                 let point = NSEvent.mouseLocation
-                guard self.running, !self.suspended, self.inside,
-                      self.windowHost?.containsHover(point) == true || self.pointerOverChildWindow(point),
-                      !self.hiddenInFullscreen, !self.hiddenUntilHover, !self.expanded, !self.peeking,
+                guard self.running, !self.suspended, self.inside else { return }
+                guard self.windowHost?.containsHover(point) == true || self.pointerOverChildWindow(point) else {
+                    // Gone from the island without an exit report: settle the
+                    // hover as a move would. Still over it but covered, as by
+                    // Mission Control, is left to the pending hover.
+                    if !self.geometry.contains(point, in: self.surfaceSize) { self.hover(false) }
+                    return
+                }
+                guard !self.hiddenInFullscreen, !self.hiddenUntilHover, !self.expanded, !self.peeking,
                       !self.dragPlaceholder, self.notice == nil, self.captureControls == nil,
                       !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return }
                 self.hoverEmphasisReady = true
@@ -1147,13 +1153,14 @@ final class NotchService: ObservableObject {
     /// An exit can then arrive with the pointer still in that margin and be
     /// the last report. From such an exit until AppKit reports the pointer
     /// again, every move is checked here, so leaving still closes the island.
-    /// The closed island's hover emphasis has the same gap, and worse: a fast
+    /// The closed island's hover emphasis and its activity picker have the
+    /// same gap, and worse: a fast
     /// pass up through the top edge to a display above can report its exit
     /// while the pointer still touches the island, or no exit at all. So while
     /// the emphasis shows, moves are followed from the entry on. A pointer at
     /// rest costs nothing.
     private func syncHoverExitMonitoring(entered: Bool, point: CGPoint) {
-        let watching = (hoverEmphasized
+        let watching = (hoverEmphasized || showsCompactActivityPicker && !activityPickerMenuOpen
                 || !entered && NotchSupport.closesOnPointerExit(expanded: expanded, peeking: peeking, openedByHover: openedByHover))
             && captureControls == nil && !pinned && !heldDrag && !hiddenUntilHover && !keepsWorkingSurface
             // Once watching, a pointer that leaves and slips back unreported is still seen.
