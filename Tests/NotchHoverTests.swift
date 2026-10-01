@@ -485,6 +485,21 @@ enum NotchHoverTests {
             suite.expect(!silent.hoverEmphasized && NSEvent.global.isEmpty && NSEvent.local.isEmpty,
                          "an unreported exit to the display above still clears the emphasis and its observers")
         }
+        // Opening or peeking on hover ends the closed island's follow at once,
+        // so the next move cannot tell a page or preview the pointer left.
+        for expands in [true, false] {
+            let opening = fixture()
+            UserDefaults.standard.expands = expands
+            let top = opening.windowHost!.rect
+            NSEvent.mouseLocation = CGPoint(x: top.midX, y: top.maxY - 1)
+            opening.hover(true)
+            suite.expect(opening.hoverEmphasized && NSEvent.global.count == 1,
+                         "the emphasized island follows the pointer before it opens")
+            DispatchQueue.main.advance(0.26)
+            suite.expect((expands ? opening.openings == 1 : opening.peeking)
+                            && NSEvent.global.isEmpty && NSEvent.local.isEmpty,
+                         "opening or peeking on hover drops the closed island's pointer observers")
+        }
         for disable: (Service) -> Void in [
             { $0.suspended = true }, { $0.windowHost = nil },
             { _ in UserDefaults.standard.hides = false }, { _ in UserDefaults.standard.enabled = false }

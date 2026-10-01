@@ -968,6 +968,10 @@ final class NotchService: ObservableObject {
         // passing through the gallery keeps that answer.
         if !expanded { detailHasPage = false }
         else if appPanel || metric != nil, !showingAppPanel, selectedMetric == nil { detailHasPage = true }
+        // Following the closed island ends the moment it opens, before a page
+        // or a capture preview under the pointer can be told the pointer left.
+        // An open page is followed again only from an exit report.
+        if !expanded { removeHoverExitMonitors() }
         mutatePresentation(transitionContent: changesPresentation ? (expanded ? .replace : .reveal) : .none) {
             showingAppPanel = appPanel
             showingSections = sections
@@ -1078,6 +1082,8 @@ final class NotchService: ObservableObject {
                       UserDefaults.standard.bool(forKey: DefaultsKey.notchOpenOnHover),
                       self.windowHost?.blocksHoverReveal() == false,
                       self.geometry.contains(NSEvent.mouseLocation, in: self.hiddenUntilHover ? self.geometry.collapsed : self.surfaceSize) else { return }
+                // Following the closed island ends as it opens or peeks.
+                self.removeHoverExitMonitors()
                 if UserDefaults.standard.bool(forKey: DefaultsKey.notchHoverExpands) {
                     self.open(takeFocus: false)
                 } else {
