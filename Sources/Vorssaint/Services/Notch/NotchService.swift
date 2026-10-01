@@ -1060,9 +1060,14 @@ final class NotchService: ObservableObject {
                 guard self.running, !self.suspended, self.inside else { return }
                 guard self.windowHost?.containsHover(point) == true || self.pointerOverChildWindow(point) else {
                     // Gone from the island without an exit report: settle the
-                    // hover as a move would. Still over it but covered, as by
+                    // hover as a move would, and rebuild the tracking area
+                    // AppKit may still count the pointer inside, so the next
+                    // approach is reported. Still over it but covered, as by
                     // Mission Control, is left to the pending hover.
-                    if !self.geometry.contains(point, in: self.surfaceSize) { self.hover(false) }
+                    if !self.geometry.contains(point, in: self.surfaceSize) {
+                        self.hover(false)
+                        self.windowHost?.resetHoverTracking()
+                    }
                     return
                 }
                 guard !self.hiddenInFullscreen, !self.hiddenUntilHover, !self.expanded, !self.peeking,
@@ -2412,6 +2417,8 @@ final class NotchService: ObservableObject {
                   windowHost?.contains(point) == true else { return }
             screenEdgePressArea = area
             hoverWork?.cancel(); hoverWork = nil
+            // A pulse landing while the button is held would move the pressed area.
+            hoverEmphasisWork?.cancel(); hoverEmphasisWork = nil
             hoverState.close(pointerInside: true)
         case .leftMouseUp:
             let pressedArea = screenEdgePressArea

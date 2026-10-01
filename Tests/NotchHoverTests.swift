@@ -48,6 +48,8 @@ enum NotchHoverTests {
         var departsContent = true
         func finishDeparture() { departsContent = false }
         var isConcealedForMissionControl = false
+        var trackingResets = 0
+        func resetHoverTracking() { trackingResets += 1 }
         var revealChecks = 0
         func blocksHoverReveal() -> Bool {
             revealChecks += 1
@@ -211,12 +213,14 @@ enum NotchHoverTests {
         hiddenPulse.windowHost?.visible = false
         let hiddenResting = hiddenPulse.surfaceSize
         hiddenPulse.hover(true)
+        DispatchQueue.main.advance(NotchSupport.hoverEmphasisDelay)
         suite.expect(hiddenPulse.surfaceSize == hiddenResting,
                      "an invisible island does not pulse before its hover reveal")
         let reducedMotion = fixture()
         NSWorkspace.shared.accessibilityDisplayShouldReduceMotion = true
         let reducedResting = reducedMotion.surfaceSize
         reducedMotion.hover(true)
+        DispatchQueue.main.advance(NotchSupport.hoverEmphasisDelay)
         suite.expect(reducedMotion.surfaceSize == reducedResting,
                      "Reduce Motion leaves the resting island still on hover")
         let compactPulse = fixture(physical: true)
@@ -238,10 +242,11 @@ enum NotchHoverTests {
         fullscreen.updateBounds()
         let blackSize = fullscreen.surfaceSize
         fullscreen.hover(true)
+        DispatchQueue.main.advance(NotchSupport.hoverEmphasisDelay)
         suite.expect(blackSize == fullscreen.geometry.restingSize(showsContent: false)
                      && !fullscreen.hoverEmphasized && fullscreen.hoverWork != nil,
                      "fullscreen keeps the cutout black but schedules configured hover access even with cached music")
-        DispatchQueue.main.advance(0.26)
+        DispatchQueue.main.advance(0.21)
         suite.expect(fullscreen.peeking && fullscreen.openings == 0,
                      "hover preview remains available from the black fullscreen cutout")
         let simulatedFullscreen = fixture()
@@ -507,6 +512,15 @@ enum NotchHoverTests {
             DispatchQueue.main.advance(NotchSupport.hoverEmphasisDelay)
             suite.expect(!unreported.hoverEmphasized && NSEvent.global.isEmpty,
                          "a pointer gone by the end of the delay, even unreported, does not grow the island")
+            suite.expect(unreported.windowHost?.trackingResets == 1 && !unreported.inside,
+                         "a pass faster than the delay with no exit report rebuilds the hover tracking area")
+            let covered = fixture()
+            NSEvent.mouseLocation = CGPoint(x: top.midX, y: top.maxY - 1)
+            covered.hover(true)
+            covered.windowHost?.isConcealedForMissionControl = true
+            DispatchQueue.main.advance(NotchSupport.hoverEmphasisDelay)
+            suite.expect(covered.windowHost?.trackingResets == 0 && !covered.hoverEmphasized,
+                         "a pointer still over a covered island neither grows it nor resets its tracking")
         }
         // Opening or peeking on hover ends the closed island's follow at once,
         // so the next move cannot tell a page or preview the pointer left.
