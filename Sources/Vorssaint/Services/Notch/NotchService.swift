@@ -1191,7 +1191,10 @@ final class NotchService: ObservableObject {
     /// the emphasis shows, moves are followed from the entry on. A pointer at
     /// rest costs nothing.
     private func syncHoverExitMonitoring(entered: Bool, point: CGPoint) {
-        let watching = (hoverEmphasized
+        // A timed capture stays attached to the closed island until its timer
+        // ends, and each followed move would tell it the pointer left, which
+        // restarts its dismissal under a pointer that came back to reopen it.
+        let watching = (hoverEmphasized && captureHover == nil
                 || !entered && NotchSupport.closesOnPointerExit(expanded: expanded, peeking: peeking, openedByHover: openedByHover))
             && captureControls == nil && !pinned && !heldDrag && !hiddenUntilHover && !keepsWorkingSurface
             // Once watching, a pointer that leaves and slips back unreported is still seen.

@@ -485,6 +485,19 @@ enum NotchHoverTests {
             suite.expect(!silent.hoverEmphasized && NSEvent.global.isEmpty && NSEvent.local.isEmpty,
                          "an unreported exit to the display above still clears the emphasis and its observers")
         }
+        // A timed capture still attached to the closed island would hear each
+        // followed move as the pointer leaving and restart its dismissal.
+        do {
+            let attached = fixture()
+            var previewHovered: Bool?
+            attached.captureHover = { previewHovered = $0 }
+            let top = attached.windowHost!.rect
+            NSEvent.mouseLocation = CGPoint(x: top.midX, y: top.maxY - 1)
+            attached.hover(true)
+            suite.expect(attached.hoverEmphasized && previewHovered == true
+                            && NSEvent.global.isEmpty && NSEvent.local.isEmpty,
+                         "the closed island holding a capture keeps it paused and does not follow the pointer")
+        }
         // Opening or peeking on hover ends the closed island's follow at once,
         // so the next move cannot tell a page or preview the pointer left.
         for expands in [true, false] {
